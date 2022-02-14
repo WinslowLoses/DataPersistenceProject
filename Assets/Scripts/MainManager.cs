@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,6 +12,7 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text highScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -18,10 +20,13 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
-    
+    private int highScore;
+    private string highScoreName;
     // Start is called before the first frame update
     void Start()
     {
+        LoadScore();
+        
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -65,12 +70,66 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        
+        if (NameData.Instance != null)
+        {
+            string name = NameData.Instance.Name;
+            ScoreText.text = $"{name}'s Score : {m_Points}";
+        }
+        else
+        {
+            ScoreText.text = $"Score : {m_Points}";
+
+        }
     }
 
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        if (m_Points > highScore)
+        { 
+            SaveScore(); 
+        }
+    }
+
+    class SaveData
+    {
+        public string name;
+        public int score;
+    }
+
+    public void SaveScore()
+    {
+        SaveData data = new SaveData();
+        if (NameData.Instance != null)
+        {
+            data.name = NameData.Instance.Name;
+        }
+        else if (NameData.Instance == null)
+        {
+            data.name = "Anon";
+        }
+        data.score = m_Points;
+
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadScore()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            if (data.score > highScore)
+            {
+                highScore = data.score;
+                highScoreName = data.name;
+            }
+            highScoreText.text = $"Best Score : {highScoreName} : {highScore}";
+        }
     }
 }
